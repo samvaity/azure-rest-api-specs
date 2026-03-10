@@ -96,6 +96,8 @@ interface QueueClient extends Storage.Queues.Queue {}
   "nextVisibleOn",
   "javascript"
 );
+@@alternateType(Storage.Queues.AccessPolicy.start, string, "javascript");
+@@alternateType(Storage.Queues.AccessPolicy.expiry, string, "javascript");
 @@clientName(Storage.Queues.AccessPolicy.start, "startsOn", "javascript");
 @@clientName(Storage.Queues.AccessPolicy.expiry, "expiresOn", "javascript");
 @@clientName(Storage.Queues.AccessPolicy.permission,
@@ -108,6 +110,14 @@ interface QueueClient extends Storage.Queues.Queue {}
 );
 @@clientName(Storage.Queues.UserDelegationKey.signedTid,
   "signedTenantId",
+  "javascript"
+);
+@@alternateType(Storage.Queues.UserDelegationKey.signedStart,
+  string,
+  "javascript"
+);
+@@alternateType(Storage.Queues.UserDelegationKey.signedExpiry,
+  string,
   "javascript"
 );
 @@clientName(Storage.Queues.UserDelegationKey.signedStart,
@@ -139,3 +149,23 @@ interface QueueClient extends Storage.Queues.Queue {}
   "timeoutInSeconds",
   "javascript"
 );
+@@clientName(Storage.Queues.Metrics.includeApis, "includeAPIs", "javascript");
+@@clientName(Storage.Queues.KeyInfo.start, "startsOn", "javascript");
+@@clientName(Storage.Queues.KeyInfo.expiry, "expiresOn", "javascript");
+@@clientOption(Storage.Queues.Error,
+  "header",
+  "x-ms-error-code:errorCode",
+  "javascript"
+);
+@@clientOption(Storage.Queues.Error,
+  "restErrorCodeHeader",
+  "x-ms-error-code",
+  "javascript"
+);
+@@clientOption(Storage.Queues.MetadataHeaders.metadata,
+  "headerCollectionPrefix",
+  "x-ms-meta",
+  "javascript"
+);
+
+@@Legacy.disablePageable(Storage.Queues.Service.getQueues, "python,javascript");
