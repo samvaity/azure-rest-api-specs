@@ -168,4 +168,6 @@ interface QueueClient extends Storage.Queues.Queue {}
   "javascript"
 );
 
+@@clientOption(Storage.Queues, "includeRootSlash", false, "python,javascript");
+
 @@Legacy.disablePageable(Storage.Queues.Service.getQueues, "python,javascript");
