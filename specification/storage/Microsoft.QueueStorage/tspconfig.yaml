@@ -13,7 +13,7 @@ options:
     output-file: "{azure-resource-provider-folder}/Microsoft.QueueStorage/{version-status}/{version}/queue.json"
     xml-strategy: "xml-service"
   "@azure-tools/typespec-python":
-    emitter-output-dir: "{output-dir}/{service-dir}/{package-name}"
+    emitter-output-dir: "{output-dir}/{service-dir}/azure-storage-queue/azure/storage/queue/_generated"
     package-name: "azure-storage-queue"
     package-mode: dataplane
     flavor: azure
