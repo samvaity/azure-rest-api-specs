@@ -1399,7 +1399,7 @@ op availablePrivateEndpointTypesOperationGroupListByResourceGroup(
 
 @@override(AvailablePrivateEndpointTypesOperationGroup.listByResourceGroup,
   availablePrivateEndpointTypesOperationGroupListByResourceGroup,
-  "go,python"
+  "go,python,java"
 );
 
 #suppress "@azure-tools/typespec-azure-resource-manager/arm-resource-operation" "customization"
@@ -1423,7 +1423,7 @@ op availablePrivateEndpointTypesOperationGroupList(
 
 @@override(AvailablePrivateEndpointTypesOperationGroup.list,
   availablePrivateEndpointTypesOperationGroupList,
-  "go"
+  "go,java"
 );
 
 #suppress "@azure-tools/typespec-azure-resource-manager/arm-resource-operation" "customization"
@@ -1460,7 +1460,7 @@ op privateLinkServicesCheckPrivateLinkServiceVisibilityByResourceGroup(
 
 @@override(PrivateLinkServicesOperationGroup.checkPrivateLinkServiceVisibilityByResourceGroup,
   privateLinkServicesCheckPrivateLinkServiceVisibilityByResourceGroup,
-  "go,python"
+  "go,python,java"
 );
 
 #suppress "@azure-tools/typespec-azure-resource-manager/arm-resource-operation" "customization"
@@ -1490,7 +1490,7 @@ op privateLinkServicesOperationGrouplistAutoApprovedPrivateLinkServicesByResourc
 
 @@override(PrivateLinkServicesOperationGroup.listAutoApprovedPrivateLinkServicesByResourceGroup,
   privateLinkServicesOperationGrouplistAutoApprovedPrivateLinkServicesByResourceGroup,
-  "go,python"
+  "go,python,java"
 );
 
 #suppress "@azure-tools/typespec-azure-resource-manager/arm-resource-operation" "customization"
@@ -1520,7 +1520,7 @@ op replaceAvailableResourceGroupDelegationsOperationGroupList(
 
 @@override(AvailableResourceGroupDelegationsOperationGroup.list,
   replaceAvailableResourceGroupDelegationsOperationGroupList,
-  "go,python"
+  "go,python,java"
 );
 
 #suppress "@azure-tools/typespec-azure-resource-manager/arm-resource-operation" "customization"
@@ -1550,7 +1550,7 @@ op replaceprivateDnsZoneGroupsList(
 
 @@override(Microsoft.Network.PrivateEndpoints.privateDnsZoneGroupsList,
   replaceprivateDnsZoneGroupsList,
-  "go,python"
+  "go,python,java"
 );
 
 // Java: restore Ip casing for model names (TypeSpec uses uppercase IP)
