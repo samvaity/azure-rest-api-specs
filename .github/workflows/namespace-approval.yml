@@ -11,24 +11,36 @@ jobs:
   detect-namespaces:
     if: github.event.action == 'opened' || github.event.action == 'synchronize'
     runs-on: ubuntu-latest
+    outputs:
+      has_pending: ${{ steps.detect.outputs.has_pending }}
     steps:
       - name: Checkout PR
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm ci
+
       - name: Install js-yaml
         run: npm install js-yaml
 
-      - name: Detect namespace changes in tspconfig.yaml
+      - name: Detect namespace changes
+        id: detect
         uses: actions/github-script@v7
         with:
           script: |
             const { execSync } = require('child_process');
             const fs = require('fs');
-            const yaml = require('${{ github.workspace }}/node_modules/js-yaml');
+            const path = require('path');
+            const yaml = require('./node_modules/js-yaml');
 
-            // Load approvers from metadata file
+            // Load approvers config
             let approversConfig;
             try {
               const approversYaml = fs.readFileSync('.github/namespace-approvers.yml', 'utf8');
@@ -50,89 +62,98 @@ jobs:
 
             core.info(`Found tspconfig.yaml changes: ${changedFiles.join(', ')}`);
 
-            const emitterMap = {
-              '@azure-typespec/http-client-csharp': 'dotnet',
-              '@azure-typespec/http-client-csharp-mgmt': 'dotnet',
-              '@azure-tools/typespec-csharp': 'dotnet',
-              '@azure-tools/typespec-java': 'java',
-              '@azure-tools/typespec-python': 'python',
-              '@azure-tools/typespec-ts': 'typescript',
-              '@azure-tools/typespec-go': 'go',
-            };
-
-            // Parse tspconfig using js-yaml for reliable extraction
-            function extractNamespaces(content) {
-              const parsed = yaml.load(content);
-              const namespaces = {};
-              if (!parsed || !parsed.options) return namespaces;
-
-              for (const [emitter, lang] of Object.entries(emitterMap)) {
-                const opts = parsed.options[emitter];
-                if (!opts) continue;
-                // namespace field (java, python, dotnet, csharp-mgmt)
-                if (opts.namespace) {
-                  namespaces[lang] = opts.namespace;
-                }
-                // TypeScript: package-details.name
-                else if (opts['package-details'] && opts['package-details'].name) {
-                  namespaces[lang] = opts['package-details'].name;
-                }
-                // Go: module
-                else if (opts.module) {
-                  namespaces[lang] = opts.module;
-                }
-              }
-              return namespaces;
-            }
-
+            // Use @azure-tools/typespec-metadata emitter to extract namespaces
             const namespacesFound = {};
             let isMgmt = false;
             let isDataPlane = false;
 
             for (const file of changedFiles) {
               if (!fs.existsSync(file)) continue;
-              const content = fs.readFileSync(file, 'utf8');
+              const tspDir = path.dirname(file);
 
-              if (file.includes('.Management/') || file.includes('/resource-manager/') || content.includes('resource-manager')) {
+              // Detect mgmt vs data plane from path
+              if (file.includes('.Management/') || file.includes('/resource-manager/')) {
                 isMgmt = true;
               } else {
                 isDataPlane = true;
               }
 
-              let isNew = false;
-              try { execSync(`git show ${base}:${file}`, { stdio: 'pipe' }); } catch { isNew = true; }
+              // Run typespec-metadata emitter
+              let metadata;
+              try {
+                core.info(`Running typespec-metadata emitter on ${tspDir}`);
+                execSync(
+                  `npx tsp compile "${tspDir}" --emit "@azure-tools/typespec-metadata" --output-dir "${tspDir}" --option "@azure-tools/typespec-metadata.format=json"`,
+                  { stdio: 'pipe', timeout: 120000 }
+                );
 
-              const currentNamespaces = extractNamespaces(content);
+                const metadataPath = path.join(tspDir, '@azure-tools', 'typespec-metadata', 'typespec-metadata.json');
+                if (!fs.existsSync(metadataPath)) {
+                  core.warning(`Metadata output not found at ${metadataPath}, falling back to YAML parse`);
+                  // Fallback below
+                  throw new Error('metadata file not found');
+                }
+                metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
 
-              if (isNew) {
-                Object.assign(namespacesFound, currentNamespaces);
-              } else {
-                try {
-                  const oldContent = execSync(`git show ${base}:${file}`, { encoding: 'utf8' });
-                  const oldNamespaces = extractNamespaces(oldContent);
-                  for (const [lang, ns] of Object.entries(currentNamespaces)) {
-                    if (oldNamespaces[lang] !== ns) {
-                      namespacesFound[lang] = ns;
-                    }
-                  }
-                } catch {
-                  Object.assign(namespacesFound, currentNamespaces);
+                // Detect type from metadata
+                if (metadata.typespec?.type === 'management') isMgmt = true;
+                if (metadata.typespec?.type === 'data') isDataPlane = true;
+
+              } catch (e) {
+                core.warning(`typespec-metadata emitter failed for ${tspDir}: ${e.message}. Falling back to YAML parse.`);
+                // Fallback: parse tspconfig.yaml directly
+                const content = fs.readFileSync(file, 'utf8');
+                const parsed = yaml.load(content);
+                if (!parsed?.options) continue;
+
+                const emitterMap = {
+                  '@azure-typespec/http-client-csharp': 'dotnet',
+                  '@azure-typespec/http-client-csharp-mgmt': 'dotnet',
+                  '@azure-tools/typespec-csharp': 'dotnet',
+                  '@azure-tools/typespec-java': 'java',
+                  '@azure-tools/typespec-python': 'python',
+                  '@azure-tools/typespec-ts': 'typescript',
+                  '@azure-tools/typespec-go': 'go',
+                };
+                for (const [emitter, lang] of Object.entries(emitterMap)) {
+                  const opts = parsed.options[emitter];
+                  if (!opts) continue;
+                  if (opts.namespace) namespacesFound[lang] = opts.namespace;
+                  else if (opts['package-details']?.name) namespacesFound[lang] = opts['package-details'].name;
+                  else if (opts.module) namespacesFound[lang] = opts.module;
+                }
+                continue;
+              }
+
+              // Extract namespaces from metadata output
+              const langMap = {
+                'csharp': 'dotnet', 'http-client-csharp': 'dotnet', 'http-client-csharp-mgmt': 'dotnet',
+                'java': 'java', 'python': 'python', 'typescript': 'typescript', 'go': 'go',
+                'rust': 'rust', 'cpp': 'cpp',
+              };
+
+              for (const [langKey, entries] of Object.entries(metadata.languages || {})) {
+                const lang = langMap[langKey] || langKey;
+                if (entries && entries.length > 0) {
+                  const ns = entries[0].namespace || entries[0].packageName;
+                  if (ns) namespacesFound[lang] = ns;
                 }
               }
-            }
 
-            const languages = Object.keys(namespacesFound);
-            if (languages.length === 0) { core.info('No namespace changes detected'); return; }
+              // Cleanup metadata output
+              const metadataDir = path.join(tspDir, '@azure-tools');
+              try { fs.rmSync(metadataDir, { recursive: true }); } catch {}
+            }
 
             // On synchronize: reset approvals for languages whose namespace changed
             const prNumber = context.payload.pull_request.number;
             if (context.payload.action === 'synchronize') {
               const { data: currentPR } = await github.rest.pulls.get({ owner: context.repo.owner, repo: context.repo.repo, pull_number: prNumber });
               const existingLabels = currentPR.labels.map(l => l.name);
-              for (const lang of languages) {
+              for (const lang of Object.keys(namespacesFound)) {
                 const approvedLabel = `${lang}-namespace-approved`;
                 if (existingLabels.includes(approvedLabel)) {
-                  core.info(`Namespace changed for ${lang} after approval, resetting`);
+                  core.info(`Namespace change detected for ${lang} after approval, resetting`);
                   try { await github.rest.issues.removeLabel({ owner: context.repo.owner, repo: context.repo.repo, issue_number: prNumber, name: approvedLabel }); } catch {}
                 }
               }
@@ -141,6 +162,10 @@ jobs:
               }
             }
 
+            const languages = Object.keys(namespacesFound);
+            if (languages.length === 0) { core.info('No namespace changes detected'); return; }
+
+            // Apply labels
             const labelsToAdd = ['namespace-review-required'];
             if (isMgmt) labelsToAdd.push('mgmt-namespace');
             if (isDataPlane) labelsToAdd.push('data-namespace');
@@ -153,14 +178,11 @@ jobs:
                 await github.rest.issues.createLabel({ owner: context.repo.owner, repo: context.repo.repo, name: label, color: colors[label] || (label.includes('pending') ? 'fbbf24' : '94a3b8') });
               }
             }
-
             await github.rest.issues.addLabels({ owner: context.repo.owner, repo: context.repo.repo, issue_number: prNumber, labels: labelsToAdd });
 
             // Build bot comment
             const getApprovers = (lang) => {
-              if (isMgmt && approversConfig['management-plane']?.all) {
-                return approversConfig['management-plane'].all;
-              }
+              if (isMgmt && approversConfig['management-plane']?.all) return approversConfig['management-plane'].all;
               return approversConfig['data-plane']?.[lang] || ['TBD'];
             };
 
@@ -169,8 +191,7 @@ jobs:
             body += `| Language | Proposed Namespace | Status | Approvers |\n`;
             body += `|----------|-------------------|--------|----------|\n`;
             for (const [lang, ns] of Object.entries(namespacesFound)) {
-              const la = getApprovers(lang);
-              body += `| ${lang} | \`${ns}\` | ⏳ Pending | ${la.join(', ')} |\n`;
+              body += `| ${lang} | \`${ns}\` | ⏳ Pending | ${getApprovers(lang).join(', ')} |\n`;
             }
             body += `\n**How to approve:** An authorized approver applies the \`<language>-namespace-approved\` label.\n`;
             body += `Merge is blocked until all languages are approved.\n`;
@@ -178,6 +199,7 @@ jobs:
               body += `\n> ⚠️ **Namespace changed** — approvals for affected languages have been reset.\n`;
             }
             body += `\n_Approver list: [.github/namespace-approvers.yml](../blob/${context.payload.pull_request.base.ref}/.github/namespace-approvers.yml)_\n`;
+            body += `_Namespaces extracted via [@azure-tools/typespec-metadata](https://www.npmjs.com/package/@azure-tools/typespec-metadata) emitter_\n`;
             body += `<!-- namespace-review-bot -->`;
 
             const comments = await github.rest.issues.listComments({ owner: context.repo.owner, repo: context.repo.repo, issue_number: prNumber });
@@ -188,11 +210,7 @@ jobs:
               await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: prNumber, body });
             }
 
-            // Set output for status-check
             core.setOutput('has_pending', 'true');
-            core.setOutput('pending_langs', languages.join(', '));
-    outputs:
-      has_pending: ${{ steps.detect-namespace-changes-in-tspconfigyaml.outputs.has_pending }}
 
   validate-approval:
     if: github.event.action == 'labeled'
@@ -213,7 +231,7 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const yaml = require('${{ github.workspace }}/node_modules/js-yaml');
+            const yaml = require('./node_modules/js-yaml');
 
             let approversConfig;
             try {
@@ -299,7 +317,7 @@ jobs:
 
             const pendingLabels = labels.filter(l => l.endsWith('-namespace-pending'));
             if (pendingLabels.length > 0) {
-              core.setFailed(`⛔ Namespace approval pending for: ${pendingLabels.map(l => l.replace('-namespace-pending', '')).join(', ')}`);
+              core.setFailed(`Namespace approval pending for: ${pendingLabels.map(l => l.replace('-namespace-pending', '')).join(', ')}`);
             } else if (labels.includes('namespace-approved')) {
               core.info('All namespaces approved - merge allowed');
             }
