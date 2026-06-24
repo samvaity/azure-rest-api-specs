@@ -65,9 +65,10 @@ describe("status-check", () => {
 
     await statusCheck(args());
 
-    const failMsg = String(core.setFailed.mock.calls[0][0]);
-    expect(failMsg).toContain("java");
-    expect(failMsg).toContain("dotnet");
+    const infoMsg = String(core.info.mock.calls.find((c) => String(c[0]).includes("pending"))?.[0]);
+    expect(infoMsg).toContain("java");
+    expect(infoMsg).toContain("dotnet");
+    expect(core.setFailed).not.toHaveBeenCalled();
     expect(github.rest.repos.createCommitStatus).toHaveBeenCalledWith(
       expect.objectContaining({ state: "pending", context: "Namespace Approval" }),
     );

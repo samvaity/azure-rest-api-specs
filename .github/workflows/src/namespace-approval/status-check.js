@@ -39,7 +39,7 @@ export default async function statusCheck({ github, context, core }) {
       context: "Namespace Approval",
       description: `Pending: ${pending}`,
     });
-    core.setFailed(`Namespace approval pending for: ${pending}`);
+    core.info(`Namespace approval pending for: ${pending}`);
   } else if (labels.includes("namespace-approved")) {
     core.info("All namespaces approved - merge allowed");
     await github.rest.repos.createCommitStatus({
