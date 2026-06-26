@@ -1,0 +1,20 @@
+linter:
+  extends:
+    - "@azure-tools/typespec-azure-rulesets/resource-manager"
+
+options:
+  "@azure-tools/typespec-csharp":
+    namespace: Azure.ResourceManager.ContosoStorage
+    clear-output-folder: true
+  "@azure-tools/typespec-java":
+    namespace: com.azure.resourcemanager.contosostorage
+    clear-output-folder: true
+  "@azure-tools/typespec-python":
+    namespace: azure.mgmt.contosostorage
+    package-name: azure-mgmt-contosostorage
+  "@azure-tools/typespec-ts":
+    package-details:
+      name: "@azure/arm-contosostorage"
+    clear-output-folder: true
+  "@azure-tools/typespec-go":
+    module: github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/contosostorage/armcontosostorage
