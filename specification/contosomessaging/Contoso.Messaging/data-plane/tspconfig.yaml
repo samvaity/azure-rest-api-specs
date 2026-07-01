@@ -1,0 +1,20 @@
+linter:
+  extends:
+    - "@azure-tools/typespec-azure-rulesets/data-plane"
+
+options:
+  "@azure-tools/typespec-csharp":
+    namespace: Azure.Messaging.Contoso
+    clear-output-folder: true
+  "@azure-tools/typespec-java":
+    namespace: com.azure.messaging.contoso
+    clear-output-folder: true
+  "@azure-tools/typespec-python":
+    namespace: azure.messaging.contoso
+    package-name: azure-messaging-contoso
+  "@azure-tools/typespec-ts":
+    package-details:
+      name: "@azure/messaging-contoso"
+    clear-output-folder: true
+  "@azure-tools/typespec-go":
+    module: github.com/Azure/azure-sdk-for-go/sdk/messaging/azcontoso
