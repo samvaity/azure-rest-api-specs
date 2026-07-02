@@ -86,9 +86,9 @@ describe("validate-approval", () => {
     it("should skip when namespace-review-required label is absent", async () => {
       context.payload = createPRLabeledPayload({
         action: "labeled",
-        labelName: "java-namespace-approved",
+        labelName: "namespace-java-approved",
         actor: "JonathanGiles",
-        labels: ["java-namespace-pending"],
+        labels: ["namespace-java-pending"],
       });
 
       await validateApproval(args());
@@ -115,9 +115,9 @@ describe("validate-approval", () => {
     it("should allow authorized approver to approve their language", async () => {
       context.payload = createPRLabeledPayload({
         action: "labeled",
-        labelName: "java-namespace-approved",
+        labelName: "namespace-java-approved",
         actor: "JonathanGiles",
-        labels: ["namespace-review-required", "java-namespace-pending"],
+        labels: ["namespace-review-required", "namespace-java-pending"],
       });
 
       github.rest.pulls.get.mockResolvedValue({
@@ -130,22 +130,22 @@ describe("validate-approval", () => {
       await validateApproval(args());
 
       expect(github.rest.issues.removeLabel).toHaveBeenCalledWith(
-        expect.objectContaining({ name: "java-namespace-pending" }),
+        expect.objectContaining({ name: "namespace-java-pending" }),
       );
     });
 
     it("should reject unauthorized approver and remove label", async () => {
       context.payload = createPRLabeledPayload({
         action: "labeled",
-        labelName: "java-namespace-approved",
+        labelName: "namespace-java-approved",
         actor: "random-user",
-        labels: ["namespace-review-required", "java-namespace-pending"],
+        labels: ["namespace-review-required", "namespace-java-pending"],
       });
 
       await validateApproval(args());
 
       expect(github.rest.issues.removeLabel).toHaveBeenCalledWith(
-        expect.objectContaining({ name: "java-namespace-approved" }),
+        expect.objectContaining({ name: "namespace-java-approved" }),
       );
       expect(github.rest.issues.createComment).toHaveBeenCalled();
       const calls = vi.mocked(github.rest.issues.createComment).mock.calls;
@@ -156,9 +156,9 @@ describe("validate-approval", () => {
     it("should allow mgmt-plane approver for mgmt PR", async () => {
       context.payload = createPRLabeledPayload({
         action: "labeled",
-        labelName: "dotnet-namespace-approved",
+        labelName: "namespace-dotnet-approved",
         actor: "ArthurMa1978",
-        labels: ["namespace-review-required", "dotnet-namespace-pending"],
+        labels: ["namespace-review-required", "namespace-dotnet-pending"],
         isMgmt: true,
       });
 
@@ -172,7 +172,7 @@ describe("validate-approval", () => {
       await validateApproval(args());
 
       expect(github.rest.issues.removeLabel).toHaveBeenCalledWith(
-        expect.objectContaining({ name: "dotnet-namespace-pending" }),
+        expect.objectContaining({ name: "namespace-dotnet-pending" }),
       );
     });
   });
@@ -183,7 +183,7 @@ describe("validate-approval", () => {
         action: "labeled",
         labelName: "namespace-approved-all",
         actor: "ArthurMa1978",
-        labels: ["namespace-review-required", "dotnet-namespace-pending", "java-namespace-pending"],
+        labels: ["namespace-review-required", "namespace-dotnet-pending", "namespace-java-pending"],
         isMgmt: true,
       });
 
@@ -197,10 +197,10 @@ describe("validate-approval", () => {
       await validateApproval(args());
 
       expect(github.rest.issues.removeLabel).toHaveBeenCalledWith(
-        expect.objectContaining({ name: "dotnet-namespace-pending" }),
+        expect.objectContaining({ name: "namespace-dotnet-pending" }),
       );
       expect(github.rest.issues.removeLabel).toHaveBeenCalledWith(
-        expect.objectContaining({ name: "java-namespace-pending" }),
+        expect.objectContaining({ name: "namespace-java-pending" }),
       );
     });
 
@@ -209,7 +209,7 @@ describe("validate-approval", () => {
         action: "labeled",
         labelName: "namespace-approved-all",
         actor: "random-user",
-        labels: ["namespace-review-required", "dotnet-namespace-pending"],
+        labels: ["namespace-review-required", "namespace-dotnet-pending"],
       });
 
       await validateApproval(args());
@@ -228,7 +228,7 @@ describe("validate-approval", () => {
     it("should re-apply pending label when removed by unauthorized user", async () => {
       context.payload = createPRLabeledPayload({
         action: "unlabeled",
-        labelName: "java-namespace-pending",
+        labelName: "namespace-java-pending",
         actor: "random-user",
         labels: ["namespace-review-required"],
       });
@@ -237,7 +237,7 @@ describe("validate-approval", () => {
 
       expect(github.rest.issues.addLabels).toHaveBeenCalledWith(
         expect.objectContaining({
-          labels: ["java-namespace-pending"],
+          labels: ["namespace-java-pending"],
         }),
       );
       expect(github.rest.issues.createComment).toHaveBeenCalled();
@@ -249,7 +249,7 @@ describe("validate-approval", () => {
     it("should allow trusted bot to remove pending label", async () => {
       context.payload = createPRLabeledPayload({
         action: "unlabeled",
-        labelName: "java-namespace-pending",
+        labelName: "namespace-java-pending",
         actor: "github-actions[bot]",
         labels: ["namespace-review-required"],
       });
@@ -266,7 +266,7 @@ describe("validate-approval", () => {
     it("should allow authorized approver to remove pending label", async () => {
       context.payload = createPRLabeledPayload({
         action: "unlabeled",
-        labelName: "dotnet-namespace-pending",
+        labelName: "namespace-dotnet-pending",
         actor: "jsquire",
         labels: ["namespace-review-required"],
       });

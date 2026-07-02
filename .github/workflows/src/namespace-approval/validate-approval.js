@@ -49,7 +49,7 @@ async function handleUnlabeled({
   actor,
   prNumber,
 }) {
-  if (!targetLabel.endsWith("-namespace-pending") && targetLabel !== "namespace-review-required") {
+  if (!/^namespace-\w+-pending$/.test(targetLabel) && targetLabel !== "namespace-review-required") {
     core.info(`${targetLabel} is not a namespace label, skipping`);
     return;
   }
@@ -139,10 +139,10 @@ async function handleLabeled({
     }
 
     langsToApprove = labels
-      .filter((label) => label.endsWith("-namespace-pending"))
-      .map((label) => label.replace("-namespace-pending", ""));
+      .filter((label) => /^namespace-\w+-pending$/.test(label))
+      .map((label) => label.slice("namespace-".length, -"-pending".length));
   } else {
-    const match = targetLabel.match(/^(\w+)-namespace-approved$/);
+    const match = targetLabel.match(/^namespace-(\w+)-approved$/);
     if (!match) {
       core.info(`${targetLabel} is not a namespace approval label`);
       return;
@@ -184,14 +184,14 @@ async function handleLabeled({
         owner: context.repo.owner,
         repo: context.repo.repo,
         issue_number: prNumber,
-        name: `${lang}-namespace-pending`,
+        name: `namespace-${lang}-pending`,
       });
     } catch {
       // label may not exist
     }
 
     if (targetLabel === "namespace-approved-all") {
-      const approvedLabel = `${lang}-namespace-approved`;
+      const approvedLabel = `namespace-${lang}-approved`;
       try {
         await github.rest.issues.getLabel({
           owner: context.repo.owner,
@@ -225,7 +225,7 @@ async function handleLabeled({
     (/** @type {{ name?: string }} */ label) => label.name ?? "",
   );
   const pendingLabels = currentLabels.filter((/** @type {string} */ label) =>
-    label.endsWith("-namespace-pending"),
+    /^namespace-\w+-pending$/.test(label),
   );
 
   const comments = await github.rest.issues.listComments({

@@ -206,7 +206,7 @@ function buildCommentBody({
     const status = preserved?.status ?? "⏳ Pending";
     const hasArtifact = artifactNames && language in artifactNames;
     const label = hasArtifact ? `${language} _(package)_` : language;
-    body += `| ${label} | \`${namespace}\` | ${formatStatus} | ${status} | ${getApprovers(approversConfig, isMgmt, language).join(", ")} |\n`;
+    body += `| ${label} | \`${namespace}\` | ${formatStatus} | ${status} | ${getApprovers(approversConfig, isMgmt, language).map((a) => `@${a}`).join(", ")} |\n`;
 
     // Show artifact row for languages that have one (e.g. Java Maven artifact)
     if (hasArtifact) {
@@ -217,7 +217,7 @@ function buildCommentBody({
         : artifactFormat.valid
           ? "✅"
           : "⚠️ Invalid";
-      body += `| ${language} _(artifact)_ | \`${artifactNs}\` | ${artifactFormatStatus} | ${status} | ${getApprovers(approversConfig, isMgmt, language).join(", ")} |\n`;
+      body += `| ${language} _(artifact)_ | \`${artifactNs}\` | ${artifactFormatStatus} | ${status} | ${getApprovers(approversConfig, isMgmt, language).map((a) => `@${a}`).join(", ")} |\n`;
     }
   }
 
@@ -231,7 +231,7 @@ function buildCommentBody({
   }
 
   body += `\n**How to approve:**\n`;
-  body += `- Per language: apply \`<language>-namespace-approved\` label\n`;
+  body += `- Per language: apply \`namespace-<language>-approved\` label\n`;
   body += `- All at once: apply \`namespace-approved-all\` label (shortcut for mgmt plane)\n\n`;
   body += `Merge is blocked until all languages are approved.\n`;
   if (resetLanguages && resetLanguages.length > 0) {
@@ -292,7 +292,7 @@ export default async function postResults({ github, context, core }) {
 
       if (!prev || prev.namespace !== newNs) {
         // Namespace changed or new language: reset approval
-        const approvedLabel = `${language}-namespace-approved`;
+        const approvedLabel = `namespace-${language}-approved`;
         if (existingLabels.includes(approvedLabel)) {
           core.info(
             `Namespace changed for ${language}: "${prev?.namespace ?? "(new)"}" → "${newNs}", resetting approval`,
@@ -306,7 +306,7 @@ export default async function postResults({ github, context, core }) {
         const newArtifact = results.artifactNames[language];
         const prevArtifact = prev.artifact;
         if (newArtifact && prevArtifact && newArtifact !== prevArtifact) {
-          const approvedLabel = `${language}-namespace-approved`;
+          const approvedLabel = `namespace-${language}-approved`;
           if (existingLabels.includes(approvedLabel)) {
             core.info(
               `Artifact changed for ${language}: "${prevArtifact}" → "${newArtifact}", resetting approval`,
@@ -348,15 +348,15 @@ export default async function postResults({ github, context, core }) {
   }
   for (const language of languages) {
     // Skip adding pending label if language is already approved
-    const approvedLabel = `${language}-namespace-approved`;
+    const approvedLabel = `namespace-${language}-approved`;
     if (!existingLabels.includes(approvedLabel)) {
-      labelsToAdd.add(`${language}-namespace-pending`);
+      labelsToAdd.add(`namespace-${language}-pending`);
     }
   }
 
   // Don't re-add namespace-review-required if everything is already approved
   const allApproved = languages.every((lang) =>
-    existingLabels.includes(`${lang}-namespace-approved`),
+    existingLabels.includes(`namespace-${lang}-approved`),
   );
   if (allApproved && languages.length > 0) {
     labelsToAdd.delete("namespace-review-required");
