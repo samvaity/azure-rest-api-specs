@@ -1,0 +1,16 @@
+options:
+  "@azure-tools/typespec-autorest":
+    emitter-output-dir: "{project-root}/.."
+  "@azure-tools/typespec-csharp":
+    namespace: "Azure.ResourceManager.ContosoWidget"
+    clear-output-folder: true
+  "@azure-tools/typespec-java":
+    namespace: "com.azure.resourcemanager.contosowidget"
+  "@azure-tools/typespec-python":
+    package-name: "azure-mgmt-contosowidget"
+  "@azure-tools/typespec-ts":
+    package-details:
+      name: "@azure/arm-contosowidget"
+linter:
+  extends:
+    - "@azure-tools/typespec-azure-resource-manager/all"
