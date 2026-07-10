@@ -1,0 +1,16 @@
+parameters:
+  service-dir:
+    default: sdk/contosowidget
+
+options:
+  "@azure-tools/typespec-python":
+    package-dir: azure-mgmt-contosowidget
+    namespace: azure.mgmt.contosowidget
+  "@azure-tools/typespec-java":
+    package-dir: azure-resourcemanager-contosowidget
+    namespace: com.azure.resourcemanager.contosowidget
+  "@azure-tools/typespec-ts":
+    package-dir: arm-contosowidget
+    namespace: "@azure/arm-contosowidget"
+  "@azure-tools/typespec-csharp":
+    namespace: Azure.ResourceManager.ContosoWidget
