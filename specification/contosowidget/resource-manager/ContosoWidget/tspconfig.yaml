@@ -11,6 +11,6 @@ options:
     namespace: com.azure.resourcemanager.contosowidget
   "@azure-tools/typespec-ts":
     package-dir: arm-contosowidget
-    namespace: "@azure/arm-contosowidget"
+    namespace: "@azure/arm-contosowidget-v2"
   "@azure-tools/typespec-csharp":
     namespace: Azure.ResourceManager.ContosoWidget
