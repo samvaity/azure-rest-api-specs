@@ -1,3 +1,4 @@
+# Test change for workflow trigger validation
 parameters:
   "service-dir":
     default: "sdk/contosowidgetmanager"
